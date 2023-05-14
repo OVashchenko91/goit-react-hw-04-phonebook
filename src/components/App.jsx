@@ -1,4 +1,4 @@
-import { Component } from "react";
+import { useState, useEffect } from "react";
 import { Notify } from 'notiflix/build/notiflix-notify-aio';
 import { Section } from "./Section/section";
 import { ContactForm } from "./ContactForm/ContactForm";
@@ -6,76 +6,58 @@ import { Filter } from "./Filter/Filter";
 import { ContactList } from "./ContactList/ContactList";
 import { Container } from "./App.styled";
 
-export class App extends Component {
-  state = {
-    contacts: [
-      {name: 'Rosie Simpson', number: '459-12-56'},
-      {name: 'Hermione Kline', number: '443-89-12'},
-      {name: 'Eden Clements', number: '645-17-79'},
-      {name: 'Annie Copeland', number: '227-91-26'},
-    ],
-    filter: ""
-  };
+export function App() {
+  const [contacts, setContacts] = useState(() => JSON.parse(window.localStorage.getItem('contacts')) ?? [
+    {name: 'Rosie Simpson', number: '459-12-56'},
+    {name: 'Hermione Kline', number: '443-89-12'},
+    {name: 'Eden Clements', number: '645-17-79'},
+    {name: 'Annie Copeland', number: '227-91-26'},
+  ]);
 
-  componentDidMount() {
-    const savedStorage = localStorage.getItem('contacts');
-    if(savedStorage) {
-      this.setState({
-        contacts: JSON.parse(savedStorage)
-      })
-    };
-  };
+  const [filter, setFilter] = useState("");
 
-  componentDidUpdate(prevProps, prevState) {
-    if(this.state.contacts.length !== prevState.contacts.length) {
-      localStorage.setItem('contacts', JSON.stringify(this.state.contacts));
-    };
-  };
+  useEffect(()=>{
+      window.localStorage.setItem('contacts', JSON.stringify(contacts));
+  }, [contacts]);
 
-  takeDataFromSubmitForm = data => {
-    const existingContact = this.state.contacts.find((element) =>
-      element.name === data.name
+  const takeDataFromSubmitForm = (name, number) => {
+    const existingContact = contacts.find((element) =>
+      element.name === name
     );
     if(existingContact) {
-      window.alert(`${data.name} is already in contacts`);
+      window.alert(`${name} is already in contacts`);
       return;
     }; 
-    this.setState(prevState => ({contacts: [...prevState.contacts, data]}));
-    Notify.success(`${data.name} is successfully added to your contact list`);
+    setContacts(prevState => [...prevState, {name: name, number: number}]);
+    Notify.success(`${name} is successfully added to your contact list`);
   };
 
-  handleFilterInputChange = e => {
-    this.setState({filter: e.currentTarget.value});
+  const getFilterRequest = (inputValue) => {
+    setFilter(inputValue);
   };
 
-  getFilteredContacts = () => {
-    return this.state.contacts.filter(element => element.name.toLowerCase().includes(this.state.filter));
-  };
-
-  deleteContact = (name) => {
-    this.setState(prevState => ({contacts: prevState.contacts.filter(contact => contact.name !== name)}));
+  const deleteContact = (name) => {
+    setContacts(prevState => prevState.filter(contact => contact.name !== name));
     Notify.failure(`${name} is deleted from your contact list`);
   };
 
-  render() {
-    const visibleContacts = this.getFilteredContacts();
-    return (
-      <>
-        <Section title="Phonebook">
-          <ContactForm handleSubmit={this.takeDataFromSubmitForm}/>
-        </Section>
-  
-        <Section title="Contacts">
-          <Container>
-            <Filter value={this.state.filter} onChange={this.handleFilterInputChange}/>
-            <ContactList
-              contacts={visibleContacts} 
-              onDeleteContact={this.deleteContact}>
-            </ContactList>
-          </Container>
-        </Section>
-      </>
-    );
-  };
+  const visibleContacts =  contacts.filter(element => element.name.toLowerCase().includes(filter));
 
+  return (
+    <>
+      <Section title="Phonebook">
+        <ContactForm takeDataFromSubmitForm={takeDataFromSubmitForm}/>
+      </Section>
+
+      <Section title="Contacts">
+        <Container>
+          <Filter getFilterRequest={getFilterRequest}/>
+          <ContactList
+            contacts={visibleContacts} 
+            deleteContact={deleteContact}>
+          </ContactList>
+        </Container>
+      </Section>
+    </>
+  );
 };
